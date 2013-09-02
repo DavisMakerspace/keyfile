@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. /etc/sentry-usbkey/config
+CONFIG=/etc/sentry-usbkey/config
 
 json_line() { echo '{}' | jshon "$@" | tr -d '\t\n'; echo; }
 
@@ -36,6 +36,7 @@ do_req() {
 }
 
 do_udev() {
+  . "$CONFIG"
   [[ "$(id -u)" != "0" ]] && echo "Must be run as root" >&2 && exit 1
   [[ -z "$ID_SERIAL" || -z "$ID_PART_ENTRY_NUMBER" || -z "$DEVNAME" ]] && exit
   map=$(<"$MAP")
