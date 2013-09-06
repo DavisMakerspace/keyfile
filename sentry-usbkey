@@ -1,80 +1,28 @@
 #!/bin/bash
 
-CONFIG=/etc/sentry-usbkey/config
-
-json_line() { echo '{}' | jshon "$@" | tr -d '\t\n'; echo; }
-
-error() {
-  echo "$0: error: $2" >&2
-  exit $1
-}
-
-do_req() {
-  if (( $# != 2 )); then
-    echo "Usage: $0 req <username> <keyfile>" >&2
-    exit 0
-  fi
-  username=$1
-  keypath=$2
-  if [[ ! -r "$keypath" ]]; then
-    error 1 "cannot read $keypath"
-  fi
-  dev=/dev/block/$(udevadm info --device-id-of-file="$keypath")
-  info=$(udevadm info --path="$dev" | sed -r 's/^E: (.*)$/\1/p;d')
-  ID_PART_ENTRY_NUMBER=$(echo "$info" | sed -r 's/^ID_PART_ENTRY_NUMBER=(.*)$/\1/p;d')
-  ID_SERIAL=$(echo "$info" | sed -r 's/^ID_SERIAL=(.*)$/\1/p;d')
-  if [[ -z "$ID_PART_ENTRY_NUMBER" || -z "$ID_SERIAL" ]]; then
-    error 2 "cannot use device $dev to hold a key"
-  fi
-  keypath_cannon=$(readlink -e "$keypath")
-  keypath_mountpoint=$(stat --format="%m" "$keypath_cannon")
-  keypath_relative=${keypath_cannon:${#keypath_mountpoint}}
-  if [[ ! -r $keypath_mountpoint$keypath_relative ]]; then
-    error 3 "could not determine relative path of key on device"
-  fi
-  echo "$ID_SERIAL $ID_PART_ENTRY_NUMBER $keypath_relative $username"
-}
-
-do_udev() {
-  . "$CONFIG"
-  [[ "$(id -u)" != "0" ]] && echo "Must be run as root" >&2 && exit 1
-  [[ -z "$ID_SERIAL" || -z "$ID_PART_ENTRY_NUMBER" || -z "$DEVNAME" ]] && exit
-  map=$(<"$MAP")
-  while read -a field; do
-    if [[ "${field[0]}" == "$ID_SERIAL" ]]; then
-      partition=${field[1]}
-      path=${field[2]}
-      user=${field[3]}
-    fi
-  done <<< "$map"
-  if [[ "$ID_PART_ENTRY_NUMBER" == "$partition" ]]; then
-    mp=$(mktemp -d)
-    mount -o ro "$DEVNAME" "$mp"
-    key="$mp/$path"
-    [[ -r "$key" ]] && secret=$(sha512sum "$key" | awk '{ print $1 }') || echo "Could not find keyfile for user $user" >&2
-    umount "$mp"
-    rmdir "$mp"
-    if [[ -n "$secret" ]]; then
-      mksentrycommand() {
-        json_line -s auth -i action -s "$user" -i user -s "$secret" -i secret
-        json_line -s unlock -i action
-      }
-      mksentrycommand | socat stdin ssl:$SENTRY_HOST:$SENTRY_PORT,cafile="$SENTRY_CERT",cert="$CERT",key="$PRIVKEY"
-      echo "Sent unlock command for user $user" >&2
-    fi
-  elif [[ -z "$partition" ]]; then
-    echo "Disk $ID_SERIAL not recognized as a key" >&2
-  fi
-}
-
-cmd=$1; shift
-case "$cmd" in
-  req) do_req "$@" ;;
-  udev) do_udev "$@" ;;
-  *)
-    echo "Usage: $0 <command>" >&2
-    echo "  req   Generate string for requesting usb key access" >&2
-    echo "  udev  Run by udev to check a disk for a key" >&2
-    exit 0
-  ;;
-esac
+if (( $# != 2 )); then
+  echo "Usage: $0 req <username> <keyfile>" >&2
+  exit 0
+fi
+error() { echo "$0: error: $2" >&2; exit $1; }
+username=$1
+keypath=$2
+if [[ ! -r "$keypath" ]]; then
+  error 1 "cannot read $keypath"
+fi
+dev=/dev/block/$(udevadm info --device-id-of-file="$keypath")
+info=$(udevadm info --path="$dev" | cut -c4- | sed 's/=/ /')
+while read -a field; do
+  [[ "${field[0]}" == "ID_PART_ENTRY_NUMBER" ]] && ID_PART_ENTRY_NUMBER=${field[1]}
+  [[ "${field[0]}" == "ID_SERIAL" ]] && ID_SERIAL=${field[1]}
+done <<< "$info"
+if [[ -z "$ID_PART_ENTRY_NUMBER" || -z "$ID_SERIAL" ]]; then
+  error 2 "cannot use device $dev to hold a key"
+fi
+keypath_cannon=$(readlink -e "$keypath")
+keypath_mountpoint=$(stat --format="%m" "$keypath_cannon")
+keypath_relative=${keypath_cannon:${#keypath_mountpoint}}
+if [[ ! -r $keypath_mountpoint$keypath_relative ]]; then
+  error 3 "could not determine relative path of key on device"
+fi
+echo "$ID_SERIAL $ID_PART_ENTRY_NUMBER $keypath_relative $username"

@@ -1,0 +1,34 @@
+#!/bin/bash
+. /etc/sentry-usbkey/config
+[[ "$(id -u)" != "0" ]] && echo "Must be run as root" >&2 && exit 1
+[[ -z "$ID_SERIAL" || -z "$ID_PART_ENTRY_NUMBER" || -z "$DEVNAME" ]] && exit
+mkdir -p "$LOGDIR"
+log() { echo "$(date -R) $ID_SERIAL $ID_PART_ENTRY_NUMBER $@" >> $LOGDIR/access.log; }
+map=$(<"$MAP")
+while read -a field; do
+  [[ "${field[0]::1}" == '#' ]] && continue
+  if [[ "${field[0]}" == "$ID_SERIAL" ]]; then
+    partition=${field[1]}
+    path=${field[2]}
+    user=${field[3]}
+  fi
+done <<< "$map"
+if [[ "$ID_PART_ENTRY_NUMBER" == "$partition" ]]; then
+  mp=$(mktemp -d)
+  mount -o ro "$DEVNAME" "$mp"
+  key="$mp/$path"
+  [[ -r "$key" ]] && secret=$(sha512sum "$key" | awk '{ print $1 }') || log "Could not find keyfile for user $user"
+  umount "$mp"
+  rmdir "$mp"
+  if [[ -n "$secret" ]]; then
+    mksentrycommand() {
+      json_line() { echo '{}' | jshon "$@" | tr -d '\t\n'; echo; }
+      json_line -s auth -i action -s "$user" -i user -s "$secret" -i secret
+      json_line -s unlock -i action
+    }
+    mksentrycommand | socat stdin ssl:$SENTRY_HOST:$SENTRY_PORT,cafile="$SENTRY_CERT",cert="$CERT",key="$PRIVKEY"
+    log "Sent unlock command for user $user"
+  fi
+elif [[ -z "$partition" ]]; then
+  log "Disk not recognized as a key"
+fi
