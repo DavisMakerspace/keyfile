@@ -1,5 +1,6 @@
 pkgname=sentry-usbkey-git
-pkgver=v0_2_g59e786c_modded
+pkgver=automatic
+pkgver=$(git --git-dir="$startdir"/.git describe --dirty=-modded | sed 's/-/_/g')
 pkgrel=1
 pkgdesc='Authenticate to sentry using usb keys'
 url='http://github.com/DavisMakerspace/sentry-usbkey'
@@ -11,11 +12,6 @@ provides=(sentry-usbkey)
 source=()
 md5sums=()
 install=install.sh
-
-pkgver() {
-  cd "$startdir"
-  git describe --dirty=-modded | sed 's/-/_/g'
-}
 
 prepare() {
   cd "$startdir"
