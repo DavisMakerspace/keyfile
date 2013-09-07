@@ -3,7 +3,7 @@
 [[ "$(id -u)" != "0" ]] && echo "Must be run as root" >&2 && exit 1
 [[ -z "$ID_SERIAL" || -z "$ID_PART_ENTRY_NUMBER" || -z "$DEVNAME" ]] && exit
 mkdir -p "$LOGDIR"
-log() { echo "$(date -R) $ID_SERIAL $ID_PART_ENTRY_NUMBER $@" >> $LOGDIR/access.log; }
+log() { echo "$(date -R) $ID_SERIAL $ID_PART_ENTRY_NUMBER $DEVNAME $@" >> $LOGDIR/access.log; }
 map=$(<"$MAP")
 while read -a field; do
   [[ "${field[0]::1}" == '#' ]] && continue
