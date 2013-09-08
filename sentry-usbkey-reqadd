@@ -1,0 +1,19 @@
+#!/bin/bash -e
+. /etc/sentry-usbkey/config
+error() { echo "$0: error: $2" >&2; exit $1; }
+[[ "$(id -u)" != "0" ]] && error 1 "must be run as root"
+[[ $1 == '-h' ]] && help=yes && shift
+[[ $1 == '-f' ]] && force=yes && shift
+if [[ $help || $# != 2 ]]; then
+  echo "Usage: $0 [-f] <username> <keypath>" >&2
+  exit 0
+fi
+username=$1
+keypath=$2
+reqfile=$REQDIR/$username
+[[ -f "$reqfile" && -z "$force" ]] && error 2 "Request for $username exists; override with force (-f) option"
+mkdir -p "$REQDIR"
+chmod 700 "$REQDIR"
+echo "$keypath" > "$reqfile"
+chmod 600 "$reqfile"
+echo "Added request for user $username" >&2

@@ -1,0 +1,31 @@
+#!/bin/bash -e
+shopt -s nullglob
+. /etc/sentry-usbkey/config
+error() { echo "$0: error: $2" >&2; exit $1; }
+[[ "$(id -u)" != "0" ]] && error 1 "must be run as root"
+[[ $1 == '-h' ]] && help=yes && shift
+if [[ $help || $# != 1 ]]; then
+  echo "Usage: $0 <devname>" >&2
+  exit 0
+fi
+devname=$1
+[[ ! -b "$devname" ]] && error 2 "$devname is not a valid device"
+reqs=($REQDIR/*)
+[[ "${reqs[@]}" == 0 ]] && error 3 "No pending requests"
+mp=$(mktemp -d)
+mount -o ro "$devname" "$mp" || error 4 "Could not mount $devname"
+for req in "${reqs[@]}" ; do
+  keyfile_try=$(<"$req")
+  keyfile=$(find "$mp" -readable -ipath '*/'"$keyfile_try" | head -n 1)
+  username=$(basename "$req")
+  [[ -n "$keyfile" ]] && break
+done
+if [[ -n "$keyfile" ]]; then
+  sentry-usbkey-useradd "$username" "$keyfile"
+  add_result=$?
+fi
+umount "$mp"
+rmdir "$mp"
+[[ -z "$keyfile" ]] && error 5 "No suitable request"
+rm "$req"
+exit $add_result
