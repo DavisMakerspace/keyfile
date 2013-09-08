@@ -1,25 +1,31 @@
 #!/bin/bash -e
 [[ "$(id -u)" != "0" ]] && echo "Must be run as root" >&2 && exit 1
-[[ -z "$ID_SERIAL" || -z "$ID_PART_ENTRY_NUMBER" || -z "$DEVNAME" ]] && exit
+[[ -z "$ID_SERIAL" || -z "$ID_PART_ENTRY_NUMBER" || -z "$ID_FS_UUID" || -z "$DEVNAME" ]] && exit
 . /etc/sentry-usbkey/config
 mkdir -p "$LOGDIR"
 LOG=$LOGDIR/access.log
 [[ -n "$DRYRUN" ]] && socat() { echo "socat $@"; cat; } && LOG=/dev/stderr
-log() { echo "$(date -R) $ID_SERIAL $ID_PART_ENTRY_NUMBER $DEVNAME $@" >> $LOG; }
+log() { echo "$(date -R) $DEVNAME $@" >> $LOG; }
+devid=$(echo "$ID_SERIAL$ID_PART_ENTRY_NUMBER$ID_FS_UUID$ID_FS_LABEL" | sha224sum); devid=${devid%% *}
 keys=$(<"$KEYS")
 while read -a field; do
   [[ "${field[0]::1}" == '#' ]] && continue
-  if [[ "${field[0]}" == "$ID_SERIAL" ]]; then
-    partition=${field[1]}
-    path=${field[2]}
-    user=${field[3]}
+  if [[ "${field[0]}" == "$devid" ]]; then
+    path=${field[1]}
+    user=${field[2]}
   fi
 done <<< "$keys"
-if [[ "$ID_PART_ENTRY_NUMBER" == "$partition" ]]; then
+if [[ -n "$path" && -n "$user" ]]; then
   mp=$(mktemp -d)
   mount -o ro "$DEVNAME" "$mp"
   key="$mp/$path"
-  [[ -r "$key" ]] && secret=$(sha512sum "$key" | awk '{ print $1 }') || log "Could not find keyfile for user $user"
+  if [[ -r "$key" ]]; then
+    secret=$(sha512sum "$key")
+    secret=$(echo "$secret$devid" | sha512sum)
+    secret=${secret%% *}
+  else
+    log "Could not find keyfile on key registered for user $user"
+  fi
   umount "$mp"
   rmdir "$mp"
   if [[ -n "$secret" ]]; then
@@ -28,14 +34,14 @@ if [[ "$ID_PART_ENTRY_NUMBER" == "$partition" ]]; then
       json_line -s auth -i action -s "$user" -i user -s "$secret" -i secret
       json_line -s unlock -i action
     }
-    mksentrycommand | socat stdin ssl:$SENTRY_HOST:$SENTRY_PORT,cafile="$SENTRY_CERT",cert="$CERT",key="$PRIVKEY"
+    mksentrycommand | socat stdin ssl:$SENTRY_HOST:$SENTRY_PORT,cafile="$SENTRY_CERT",cert="$CERT",key="$PRIVKEY" |& while read -r line; do log "$line"; done
     log "Sent unlock command for user $user"
   fi
 elif [[ -z "$partition" ]]; then
   log "Disk not recognized as a key; trying requests"
   sentry-usbkey-reqtry "$DEVNAME" |& while read -r line; do log "$line"; done
   if ! (echo "$keys" | diff - "$KEYS" >&/dev/null); then
-    log "keys file changed; trying again"
+    log "Keys file changed; trying again"
     exec "$0"
   fi
 fi

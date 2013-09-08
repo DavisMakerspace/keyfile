@@ -12,7 +12,7 @@ fi
 devname=$1
 [[ ! -b "$devname" ]] && error 2 "$devname is not a valid device"
 reqs=($REQDIR/*)
-[[ "${reqs[@]}" == 0 ]] && warn 3 "No pending requests"
+[[ "${#reqs[@]}" == 0 ]] && warn 3 "No pending requests"
 mp=$(mktemp -d)
 mount -o ro "$devname" "$mp" || error 4 "Could not mount $devname"
 for req in "${reqs[@]}" ; do
