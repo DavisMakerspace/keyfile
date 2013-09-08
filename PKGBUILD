@@ -11,7 +11,7 @@ depends=(bash systemd jshon)
 makedepends=()
 provides=($_pkgname)
 install=install.sh
-backup=(etc/$_pkgname/config etc/$_pkgname/map)
+backup=(etc/$_pkgname/config etc/$_pkgname/keys)
 source=()
 md5sums=()
 
