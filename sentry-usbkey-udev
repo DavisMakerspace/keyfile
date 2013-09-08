@@ -20,9 +20,8 @@ if [[ -n "$path" && -n "$user" ]]; then
   mount -o ro "$DEVNAME" "$mp"
   key="$mp/$path"
   if [[ -r "$key" ]]; then
-    secret=$(sha512sum "$key")
-    secret=$(echo "$secret$devid" | sha512sum)
-    secret=${secret%% *}
+    secret=$(sha512sum "$key"); secret=${secret%% *}
+    secret=$(echo "$secret$devid$path" | sha512sum); secret=${secret%% *}
   else
     log "Could not find keyfile on key registered for user $user"
   fi
