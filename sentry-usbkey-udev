@@ -6,7 +6,7 @@ mkdir -p "$LOGDIR"
 LOG=$LOGDIR/access.log
 [[ -n "$DRYRUN" ]] && socat() { echo "socat $@"; cat; } && LOG=/dev/stderr
 log() { echo "$(date -R) $ID_SERIAL $ID_PART_ENTRY_NUMBER $DEVNAME $@" >> $LOG; }
-map=$(<"$MAP")
+keys=$(<"$KEYS")
 while read -a field; do
   [[ "${field[0]::1}" == '#' ]] && continue
   if [[ "${field[0]}" == "$ID_SERIAL" ]]; then
@@ -14,7 +14,7 @@ while read -a field; do
     path=${field[2]}
     user=${field[3]}
   fi
-done <<< "$map"
+done <<< "$keys"
 if [[ "$ID_PART_ENTRY_NUMBER" == "$partition" ]]; then
   mp=$(mktemp -d)
   mount -o ro "$DEVNAME" "$mp"

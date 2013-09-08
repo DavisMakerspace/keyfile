@@ -11,7 +11,7 @@ do_install() {
     install -d "$DESTDIR/${!x}"
   done
   install -m644 config "$DESTDIR/$ETCDIR/config"
-  install -m644 map "$DESTDIR/$ETCDIR/map"
+  install -m644 keys "$DESTDIR/$ETCDIR/keys"
   install -m755 $NAME-useradd "$DESTDIR/$BINDIR/$NAME-useradd"
   install -m755 $NAME-reqadd "$DESTDIR/$BINDIR/$NAME-reqadd"
   install -m755 $NAME-reqtry "$DESTDIR/$BINDIR/$NAME-reqtry"

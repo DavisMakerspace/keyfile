@@ -21,7 +21,7 @@ keypath_cannon=$(readlink -e "$keypath")
 keypath_mountpoint=$(stat --format="%m" "$keypath_cannon")
 keypath_relative=${keypath_cannon:${#keypath_mountpoint}}
 [[ ! -r $keypath_mountpoint$keypath_relative ]] && error 4 "could not determine relative path of key on device"
-check=$(grep -m 1 "^$ID_SERIAL " $MAP 2>/dev/null || true)
+check=$(grep -m 1 "^$ID_SERIAL " "$KEYS" 2>/dev/null || true)
 [[ -n "$check" ]] && error 5 "this key device already used by ${check##* }"
-echo "$ID_SERIAL $ID_PART_ENTRY_NUMBER $keypath_relative $username" >> "$MAP"
+echo "$ID_SERIAL $ID_PART_ENTRY_NUMBER $keypath_relative $username" >> "$KEYS"
 echo "Entry added for $username"

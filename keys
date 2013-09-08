@@ -1,0 +1,5 @@
+#
+# List of registered keys, mapping device id to secret path and username
+#
+# ID_SERIAL ID_PART_ENTRY_NUMBER /path/to/secret username
+#

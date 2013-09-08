@@ -1,5 +1,0 @@
-#
-# Map device serial numbers to secret location and user name
-#
-# ID_SERIAL ID_PART_ENTRY_NUMBER /path/to/secret username
-#

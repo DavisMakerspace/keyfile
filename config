@@ -1,5 +1,5 @@
 # List of registered usb keys
-MAP=/etc/sentry-usbkey/map
+KEYS=/etc/sentry-usbkey/keys
 
 # Log dir
 LOGDIR=/var/log/sentry-usbkey
