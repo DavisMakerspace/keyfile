@@ -1,19 +1,20 @@
-etc=$(dirname "${BASH_SOURCE[0]}")
-
 # List of registered usb keys
-MAP=$etc/map
+MAP=/etc/sentry-usbkey/map
 
 # Log dir
 LOGDIR=/var/log/sentry-usbkey
 
+# Requests dir
+REQDIR=/var/lib/sentry-usbkey/requests
+
 # SSL private key for usbkey sentry client
-PRIVKEY=$etc/privkey.pem
+PRIVKEY=/etc/sentry-usbkey/privkey.pem
 
 # SSL certificate for usbkey sentry client
-CERT=$etc/cert.pem
+CERT=/etc/sentry-usbkey/cert.pem
 
 # SSL certificate for sentry server
-SENTRY_CERT=$etc/sentry-cert.pem
+SENTRY_CERT=/etc/sentry-usbkey/sentry-cert.pem
 
 # Hostname where sentry server is running
 SENTRY_HOST=host.domain.tld
