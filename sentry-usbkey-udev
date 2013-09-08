@@ -32,5 +32,10 @@ if [[ "$ID_PART_ENTRY_NUMBER" == "$partition" ]]; then
     log "Sent unlock command for user $user"
   fi
 elif [[ -z "$partition" ]]; then
-  log "Disk not recognized as a key"
+  log "Disk not recognized as a key; trying requests"
+  sentry-usbkey-reqtry "$DEVNAME" |& while read -r line; do log "$line"; done
+  if ! (echo "$keys" | diff - "$KEYS" >&/dev/null); then
+    log "keys file changed; trying again"
+    exec "$0"
+  fi
 fi

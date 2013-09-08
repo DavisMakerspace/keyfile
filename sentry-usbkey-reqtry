@@ -2,6 +2,7 @@
 shopt -s nullglob
 . /etc/sentry-usbkey/config
 error() { echo "$0: error: $2" >&2; exit $1; }
+warn() { echo "$0: $2" >&2; exit $1; }
 [[ "$(id -u)" != "0" ]] && error 1 "must be run as root"
 [[ $1 == '-h' ]] && help=yes && shift
 if [[ $help || $# != 1 ]]; then
@@ -11,7 +12,7 @@ fi
 devname=$1
 [[ ! -b "$devname" ]] && error 2 "$devname is not a valid device"
 reqs=($REQDIR/*)
-[[ "${reqs[@]}" == 0 ]] && error 3 "No pending requests"
+[[ "${reqs[@]}" == 0 ]] && warn 3 "No pending requests"
 mp=$(mktemp -d)
 mount -o ro "$devname" "$mp" || error 4 "Could not mount $devname"
 for req in "${reqs[@]}" ; do
@@ -26,6 +27,6 @@ if [[ -n "$keyfile" ]]; then
 fi
 umount "$mp"
 rmdir "$mp"
-[[ -z "$keyfile" ]] && error 5 "No suitable request"
+[[ -z "$keyfile" ]] && warn 5 "No suitable request";
 rm "$req"
 exit $add_result
