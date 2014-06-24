@@ -1,0 +1,76 @@
+#!/bin/bash -e
+
+if [[ "$(id -u)" != "0" ]]; then echo "error: must be run as root" >&2; exit 1; fi
+
+keysfile="$(dirname "$0")"/../etc/keys
+keys(){
+  if [[ ! -e "$keysfile" ]]; then
+    touch "$keysfile"
+    chmod 600 "$keysfile"
+  fi
+  cat "$keysfile"
+}
+
+CMD=$1; shift||true
+case "$CMD" in
+deviceid)
+  if [[ $# != 1 ]]; then echo "usage: $0 $CMD <devicename>" >&2; exit 3; fi
+  DEVNAME=$1
+  unset ID_SERIAL ID_PART_ENTRY_NUMBER ID_FS_UUID ID_FS_LABEL
+  eval $(udevadm info --query property --export --name "$DEVNAME")
+  if [[ -z "$ID_SERIAL" || -z "$ID_PART_ENTRY_NUMBER" || -z "$ID_FS_UUID" ]]; then echo "error: not a valid key device" >&2; exit 4; fi
+  deviceid=$(echo "$ID_SERIAL$ID_PART_ENTRY_NUMBER$ID_FS_UUID$ID_FS_LABEL" | sha224sum)
+  echo "${deviceid%% *}"
+;;
+user)
+  if [[ $# != 1 ]]; then echo "usage: $0 $CMD <userid>" >&2; exit 5; fi
+  USERID=$1
+  keys | grep -E "^$USERID " 2>/dev/null || { echo "error: user $USERID not found" >&2; exit 6; }
+;;
+device)
+  if [[ $# != 1 ]]; then echo "usage: $0 $CMD <deviceid>" >&2; exit 7; fi
+  DEVID=$1
+  keys | grep -E "^[^ ]+ $DEVID " 2>/dev/null || { echo "error: device is not a registered key" >&2; exit 8; }
+;;
+users)
+  if [[ $# != 0 ]]; then echo "usage: $0 $CMD" >&2; exit 9; fi
+  keys | grep -E -o "^[^ ]+" 2>/dev/null
+;;
+hash)
+  if [[ $# != 2 ]]; then echo "usage: $0 $CMD <devicename> <keypath>" >&2; exit 10; fi
+  DEVNAME=$1; KEYPATH=$2
+  mp=$(lsblk -no mountpoint "$DEVNAME")
+  if [[ -z "$mp" ]]; then
+    mp=$(mktemp -d); mount -o ro "$DEVNAME" "$mp"
+    trap 'umount "$mp"; rmdir "$mp"' EXIT
+  fi
+  key="$mp/$KEYPATH"
+  if [[ ! -r "$key" ]]; then echo "error: cannot read key file" >&2; exit 11; fi
+  deviceid=$("$0" deviceid "$DEVNAME")
+  hash=$(sha512sum "$key"); hash=${hash%% *}; hash=$(echo "$hash$deviceid$KEYPATH" | sha512sum); hash=${hash%% *}
+  echo "$hash"
+;;
+add)
+  if [[ $# != 3 ]]; then echo "usage: $0 $CMD <userid> <devicename> <keypath>" >&2; exit 12; fi
+  USERID=$1; DEVNAME=$2; KEYPATH=$3
+  deviceid=$("$0" deviceid "$DEVNAME")
+  e=$("$0" device "$deviceid" 2>/dev/null||true); if [[ -n "$e" ]]; then echo "error: $DEVNAME already is a key for ${e%% *}" >&2; exit 13; fi
+  hash=$("$0" hash "$DEVNAME" "$KEYPATH")
+  echo "$USERID $deviceid $hash $KEYPATH" >>"$keysfile"
+  echo "$USERID added" >&2
+;;
+auth)
+  if [[ $# != 1 ]]; then echo "usage: $0 $CMD <devicename>" >&2; exit 14; fi
+  DEVNAME=$1
+  entry=$("$0" device "$("$0" deviceid "$DEVNAME")")
+  userid=${entry%% *}
+  secret=${entry#* * }; secret=${secret%% *}
+  keypath=${entry#* * * }
+  hash=$("$0" hash "$DEVNAME" "$keypath")
+  if [[ -n "$hash" && "$hash" != "$secret" ]]; then echo "error: incorrect key file on key registered to user $userid" >&2; exit 15; fi
+  echo "$userid"
+;;
+*)
+  echo "usage: $0 deviceid | user | device | users | hash | add | auth" >&2; exit 2
+;;
+esac

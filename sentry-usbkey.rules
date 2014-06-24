@@ -1,1 +1,0 @@
-ACTION=="add", KERNEL=="sd*", RUN+="/usr/lib/sentry-usbkey/sentry-usbkey-udev"

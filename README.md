@@ -1,3 +1,7 @@
-# sentry-usbkey
+# usbkey
 
-This is a little udev-activated script to talk with the sentry server to allow door control on the connection of a registered usb key.
+Authenticate users based on a usb key.
+
+## Install
+
+`make install` will set up and install the needed udev rule.

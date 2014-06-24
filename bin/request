@@ -1,0 +1,55 @@
+#!/bin/bash -e
+
+if [[ "$(id -u)" != "0" ]]; then echo "error: must be run as root" >&2; exit 1; fi
+
+DIR=$(dirname "$0")
+requestsfile="$DIR"/../etc/requests
+requests(){
+  if [[ ! -e "$requestsfile" ]]; then
+    touch "$requestsfile"
+    chmod 600 "$requestsfile"
+  fi
+  cat "$requestsfile"
+}
+
+CMD=$1; shift||true
+case "$CMD" in
+user)
+  if [[ $# != 1 ]]; then echo "usage: $0 $CMD <username>" >&2; exit 3; fi
+  USERNAME=$1
+  requests | grep -E "^$USERNAME " 2>/dev/null || { echo "error: user $USERNAME not found" >&2; exit 4; }
+;;
+list)
+  requests
+;;
+add)
+  if [[ $# != 2 ]]; then echo "usage: $0 $CMD <username> <keypathish>" >&2; exit 5; fi
+  USERNAME=$1; KEYPATHISH=$2
+  echo "$USERNAME $KEYPATHISH" >>"$requestsfile"
+  echo "$USERNAME added" >&2
+;;
+try)
+  if [[ $# != 1 ]]; then echo "usage: $0 $CMD <devname>" >&2; exit 6; fi
+  DEVNAME=$1
+  if [[ ! -s "$requestsfile" ]]; then echo "notice: no pending requests to try"; exit 5; fi
+  mp=$(lsblk -no mountpoint "$DEVNAME")
+  if [[ -z "$mp" ]]; then
+    mp=$(mktemp -d); mount -o ro "$DEVNAME" "$mp"
+    trap 'umount "$mp"; rmdir "$mp"' EXIT
+  fi
+  lineno=0
+  while read -r request; do
+    lineno=$(($lineno+1))
+    username=${request%% *}
+    keypathish=${request#* }
+    keypath=$(find "$mp" -readable -type f -ipath '*/'"$keypathish" | head -n 1); keypath=${keypath#$mp}
+    if [[ -n "$keypath" ]]; then break; fi
+  done <"$requestsfile"
+  if [[ ! -n "$keypath" ]]; then echo "notice: no matching request found for device $DEVNAME" >&2; exit 6; fi
+  "$DIR"/usbkey add "$username" "$DEVNAME" "$keypath"
+  sed -i'' "$lineno"d "$requestsfile"
+;;
+*)
+  echo "usage: $0 user | list | add | try" >&2; exit 2
+;;
+esac

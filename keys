@@ -1,5 +1,0 @@
-#
-# List of registered keys, mapping device id to secret path and username
-#
-# device-id /path/to/secret username
-#
