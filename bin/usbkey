@@ -18,9 +18,9 @@ deviceid)
   DEVNAME=$1
   unset ID_SERIAL ID_PART_ENTRY_NUMBER ID_FS_UUID ID_FS_LABEL
   eval $(udevadm info --query property --export --name "$DEVNAME")
-  if [[ -z "$ID_SERIAL" || -z "$ID_PART_ENTRY_NUMBER" || -z "$ID_FS_UUID" ]]; then echo "error: not a valid key device" >&2; exit 4; fi
-  deviceid=$(echo "$ID_SERIAL$ID_PART_ENTRY_NUMBER$ID_FS_UUID$ID_FS_LABEL" | sha224sum)
-  echo "${deviceid%% *}"
+  if [[ -z "$ID_SERIAL" || -z "$ID_PART_ENTRY_NUMBER" || -z "$ID_FS_UUID" ]]; then echo "error: $DEVNAME is not a valid key device" >&2; exit 4; fi
+  deviceid=$(echo "$ID_SERIAL$ID_PART_ENTRY_NUMBER$ID_FS_UUID$ID_FS_LABEL" | sha224sum); deviceid="${deviceid%% *}"
+  echo "$deviceid"
 ;;
 user)
   if [[ $# != 1 ]]; then echo "usage: $0 $CMD <userid>" >&2; exit 5; fi
@@ -62,7 +62,8 @@ add)
 auth)
   if [[ $# != 1 ]]; then echo "usage: $0 $CMD <devicename>" >&2; exit 14; fi
   DEVNAME=$1
-  entry=$("$0" device "$("$0" deviceid "$DEVNAME")")
+  deviceid=$("$0" deviceid "$DEVNAME")
+  entry=$("$0" device "$deviceid")
   userid=${entry%% *}
   secret=${entry#* * }; secret=${secret%% *}
   keypath=${entry#* * * }
