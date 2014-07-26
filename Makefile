@@ -2,7 +2,7 @@
 all: install
 
 .PHONY: install
-install: /etc/udev/rules.d/usbkey.rules
+install: /etc/udev/rules.d/keyfile.rules
 
-/etc/udev/rules.d/usbkey.rules: install/usbkey.rules.template
+/etc/udev/rules.d/keyfile.rules: install/keyfile.rules.template
 	sed 's|/PATH/TO|'"$$(readlink -f .)"'|g' $< >$@

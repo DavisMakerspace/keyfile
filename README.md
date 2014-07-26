@@ -1,6 +1,6 @@
-# usbkey
+# keyfile
 
-Authenticate users based on a usb key.
+Authenticate users based on a file on a usb key.
 
 ## Install
 

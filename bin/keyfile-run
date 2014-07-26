@@ -2,6 +2,6 @@
 if [[ "$(id -u)" != "0" ]]; then echo "erro: must be run as root" >&2; exit 1; fi
 if [[ $# != 1 ]]; then echo "usage: $0 <devname>" >&2; exit 2; fi
 DIR=$(dirname "$0"); DEVNAME=$1
-user=$("$DIR"/usbkey auth "$DEVNAME")
+user=$("$DIR"/keyfile auth "$DEVNAME")
 echo "device $DEVNAME identified user $user; running scripts" >&2
 run-parts --verbose --arg="$user" -- "$DIR"/../etc/run.d

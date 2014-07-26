@@ -1,5 +1,5 @@
 #!/bin/bash -e
 [[ -z "$DEVNAME" ]] && exit
 DIR=$(dirname "$0")
-authrun(){ "$DIR"/usbkey-run "$DEVNAME"; }
-{ authrun || { [[ -n $("$DIR"/request list) ]] && "$DIR"/request try "$DEVNAME" && authrun; }; }|& logger --tag usbkey
+authrun(){ "$DIR"/keyfile-run "$DEVNAME"; }
+{ authrun || { [[ -n $("$DIR"/request list) ]] && "$DIR"/request try "$DEVNAME" && authrun; }; }|& logger --tag keyfile

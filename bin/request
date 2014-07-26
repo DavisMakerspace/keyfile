@@ -46,7 +46,7 @@ try)
     if [[ -n "$keypath" ]]; then break; fi
   done <"$requestsfile"
   if [[ ! -n "$keypath" ]]; then echo "notice: no matching request found for device $DEVNAME" >&2; exit 6; fi
-  "$DIR"/usbkey add "$username" "$DEVNAME" "$keypath"
+  "$DIR"/keyfile add "$username" "$DEVNAME" "$keypath"
   sed -i'' "$lineno"d "$requestsfile"
 ;;
 *)
