@@ -1,5 +1,5 @@
 #!/bin/bash -e
-if [[ "$(id -u)" != "0" ]]; then echo "erro: must be run as root" >&2; exit 1; fi
+if [[ "$(id -u)" != "0" ]]; then echo "error: must be run as root" >&2; exit 1; fi
 if [[ $# != 1 ]]; then echo "usage: $0 <devname>" >&2; exit 2; fi
 DIR=$(dirname "$0"); DEVNAME=$1
 user=$("$DIR"/keyfile auth "$DEVNAME")
