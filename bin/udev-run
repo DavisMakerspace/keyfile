@@ -1,3 +1,5 @@
 #!/bin/bash -e
 [[ -z "$DEVNAME" ]] && exit
-"$(dirname "$0")"/keyfile-run "$DEVNAME" |& logger --tag keyfile
+DIR=$(dirname "$0")
+authrun(){ "$DIR"/keyfile-run "$DEVNAME"; }
+{ authrun || { [[ -n $("$DIR"/request list) ]] && "$DIR"/request try "$DEVNAME" && authrun; }; }|& logger --tag keyfile

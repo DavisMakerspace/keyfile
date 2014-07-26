@@ -1,1 +1,1 @@
-ACTION=="add", KERNEL=="sd*", RUN+="/PATH/TO/bin/udev-run-or-req"
+ACTION=="add", KERNEL=="sd*", RUN+="/PATH/TO/bin/udev-run"
